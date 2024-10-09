@@ -11,6 +11,62 @@ class Item:
     def __repr__(self):
         return "%s, %s, %s" % (self.name, self.sell_in, self.quality)
 
+    def __eq__(self, other):
+        return (self.name == other.name and
+                self.sell_in == other.sell_in and
+                self.quality == other.quality)
+
+# Strategy Interface
+class ItemStrategy:
+    def update_quality(self, item: Item):
+        raise NotImplementedError
+
+# Normal Item Strategy
+class NormalItemStrategy(ItemStrategy):
+    def update_quality(self, item: Item):
+        if item.quality > 0:
+            item.quality -= 1
+        item.sell_in -= 1
+        if item.sell_in < 0 and item.quality > 0:
+            item.quality -= 1
+
+# Aged Brie Strategy
+class AgedBrieStrategy(ItemStrategy):
+    def update_quality(self, item: Item):
+        if item.quality < 50:
+            item.quality += 1
+        item.sell_in -= 1
+        if item.sell_in < 0 and item.quality < 50:
+            item.quality += 1
+
+# Sulfuras Strategy
+class SulfurasStrategy(ItemStrategy):
+    def update_quality(self, item: Item):
+        # Sulfuras never changes
+        pass
+
+# Backstage Passes Strategy
+class BackstagePassesStrategy(ItemStrategy):
+    def update_quality(self, item: Item):
+        if item.quality < 50:
+            item.quality += 1
+            if item.sell_in < 11 and item.quality < 50:
+                item.quality += 1
+            if item.sell_in < 6 and item.quality < 50:
+                item.quality += 1
+        item.sell_in -= 1
+        if item.sell_in < 0:
+            item.quality = 0
+
+# Conjured Item Strategy
+class ConjuredItemStrategy(ItemStrategy):
+    def update_quality(self, item: Item):
+        if item.quality > 0:
+            item.quality -= 2
+        item.sell_in -= 1
+        if item.sell_in < 0 and item.quality > 0:
+            item.quality -= 2
+
 
 class GildedRose(object):
 
@@ -20,30 +76,17 @@ class GildedRose(object):
 
     def update_quality(self):
         for item in self.items:
-            if item.name != "Aged Brie" and item.name != "Backstage passes to a TAFKAL80ETC concert":
-                if item.quality > 0:
-                    if item.name != "Sulfuras, Hand of Ragnaros":
-                        item.quality = item.quality - 1
-            else:
-                if item.quality < 50:
-                    item.quality = item.quality + 1
-                    if item.name == "Backstage passes to a TAFKAL80ETC concert":
-                        if item.sell_in < 11:
-                            if item.quality < 50:
-                                item.quality = item.quality + 1
-                        if item.sell_in < 6:
-                            if item.quality < 50:
-                                item.quality = item.quality + 1
-            if item.name != "Sulfuras, Hand of Ragnaros":
-                item.sell_in = item.sell_in - 1
-            if item.sell_in < 0:
-                if item.name != "Aged Brie":
-                    if item.name != "Backstage passes to a TAFKAL80ETC concert":
-                        if item.quality > 0:
-                            if item.name != "Sulfuras, Hand of Ragnaros":
-                                item.quality = item.quality - 1
-                    else:
-                        item.quality = item.quality - item.quality
-                else:
-                    if item.quality < 50:
-                        item.quality = item.quality + 1
+            strategy = self.get_strategy(item)
+            strategy.update_quality(item)
+    
+    def get_strategy(self, item: Item) -> ItemStrategy:
+        if item.name == "Aged Brie":
+            return AgedBrieStrategy()
+        elif item.name == "Sulfuras, Hand of Ragnaros":
+            return SulfurasStrategy()
+        elif item.name == "Backstage passes to a TAFKAL80ETC concert":
+            return BackstagePassesStrategy()
+        elif "Conjured" in item.name:
+            return ConjuredItemStrategy()
+        else:
+            return NormalItemStrategy()
